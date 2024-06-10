@@ -1,0 +1,18 @@
+spring:
+    application:
+        name: openrewritebitbucketutlily
+git:
+    command:
+        active: clone
+    repos:
+        checkout:
+            path: C:\Git\checkout
+        source:
+            excel:
+                file:
+                    path: C:\Git\BitbuketSourceFile.xlsx
+logging:
+  pattern:
+    file: '%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){green} [%level] %c{1.} [%t] %m%n'
+  file:
+    name: error.log
