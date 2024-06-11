@@ -3,12 +3,11 @@ package com.open.rewrite.bitbucket.utility.helper;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Map.Entry;
 
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -25,11 +24,11 @@ public class FileReader {
 	@Value("${git.command.active}")
 	private String git_command_active;
 
-	private List<String> bitbuketReposData = new ArrayList<>();
+	private Map<String, String> bitbuketReposData = new HashMap<String, String>();
 
 	Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-	private List<?> fetchSourceData(String file) throws IOException {
+	private Map<?, ?> fetchSourceData(String file) throws IOException {
 		FileInputStream sourceFile = new FileInputStream(file);
 		logger.info("BitBucket Process Started" + file);
 		XSSFWorkbook workbook = new XSSFWorkbook(sourceFile);
@@ -37,26 +36,22 @@ public class FileReader {
 		Iterator<Row> rowIterator = sheet.iterator();
 		while (rowIterator.hasNext()) {
 			Row row = rowIterator.next();
-			Iterator<Cell> cellIterator = row.cellIterator();
-			while (cellIterator.hasNext()) {
-				Cell cell = cellIterator.next();
-				bitbuketReposData.add(cell.getStringCellValue());
-				logger.info("cell.getStringCellValue() "+cell.getStringCellValue());
-			}
-			sourceFile.close();
+			bitbuketReposData.put(row.getCell(0).getStringCellValue(), row.getCell(1).getStringCellValue().replaceAll("\\*/", ""));
 		}
-		return bitbuketReposData.stream().sorted().collect(Collectors.toList());
+		sourceFile.close();
+		return bitbuketReposData;
 	}
 
 	public void executeGitCli(String file) throws IOException {
 		var i = 0;
 		fetchSourceData(file);
-		logger.info("BitBucket Repos Size : " + bitbuketReposData.size() + " with Git operation : "+git_command_active);
-		for (String repos : bitbuketReposData) {
+		logger.info(
+				"BitBucket Repos Size : " + bitbuketReposData.size() + " with Git operation : " + git_command_active);
+		for (Entry<?,?> kv : bitbuketReposData.entrySet()) {
 			try {
-				Process process = Runtime.getRuntime().exec("git " + git_command_active + " " + repos + "", null,
+				Process process = Runtime.getRuntime().exec("git " + git_command_active + " -b " +kv.getValue()+" "+ kv.getKey() + "", null,
 						new File(git_repos_checkout_path));
-				logger.info("BitBucket procssing  initited count " + i++ + " " + process.isAlive() + " - " + repos);
+				logger.info("BitBucket procssing  initited count " + i++ + " " + process.isAlive() + " - " + kv );
 				process.waitFor();
 				int exitValue = process.exitValue();
 				logger.info("process exitValue " + exitValue);
